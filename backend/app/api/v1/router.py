@@ -12,6 +12,7 @@ from app.api.v1.endpoints.product_esg_profiles import router as product_esg_prof
 from app.api.v1.endpoints.environmental_goals import router as environmental_goals_router
 from app.api.v1.endpoints.badges import router as badges_router
 from app.api.v1.endpoints.rewards import router as rewards_router
+from app.api.v1.endpoints.gamification_services import router as gamification_services_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -27,3 +28,4 @@ api_router.include_router(product_esg_profiles_router, prefix="/product-esg-prof
 api_router.include_router(environmental_goals_router, prefix="/environmental-goals", tags=["environmental-goals"])
 api_router.include_router(badges_router, prefix="/badges", tags=["badges"])
 api_router.include_router(rewards_router, prefix="/rewards", tags=["rewards"])
+api_router.include_router(gamification_services_router, tags=["gamification-services"])

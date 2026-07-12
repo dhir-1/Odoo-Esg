@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
-from datetime import date
-from sqlalchemy import String, Integer, Enum as SQLEnum, Text, ForeignKey, Date, Numeric, Boolean
+from datetime import date, datetime
+from sqlalchemy import String, Integer, Enum as SQLEnum, Text, ForeignKey, Date, Numeric, Boolean, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -66,3 +66,30 @@ class ChallengeParticipation(Base, TimestampMixin):
     challenge: Mapped["Challenge"] = relationship("Challenge")
     employee: Mapped["Employee"] = relationship("Employee", foreign_keys=[employee_id])
     reviewed_by: Mapped[Optional["Employee"]] = relationship("Employee", foreign_keys=[reviewed_by_id])
+
+
+class EmployeeBadge(Base):
+    __tablename__ = "employee_badges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employees.id"), nullable=False)
+    badge_id: Mapped[int] = mapped_column(Integer, ForeignKey("badges.id"), nullable=False)
+    awarded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    employee: Mapped["Employee"] = relationship("Employee", foreign_keys=[employee_id])
+    badge: Mapped["Badge"] = relationship("Badge")
+
+
+class RewardRedemption(Base):
+    __tablename__ = "reward_redemptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employees.id"), nullable=False)
+    reward_id: Mapped[int] = mapped_column(Integer, ForeignKey("rewards.id"), nullable=False)
+    points_spent: Mapped[int] = mapped_column(Integer, nullable=False)
+    redeemed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    employee: Mapped["Employee"] = relationship("Employee", foreign_keys=[employee_id])
+    reward: Mapped["Reward"] = relationship("Reward")

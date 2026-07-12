@@ -393,6 +393,10 @@ async def approve_participation(
 
     await db.commit()
     await db.refresh(participation)
+
+    from app.services.gamification import evaluate_badges_for_employee
+    await evaluate_badges_for_employee(db, employee.id)
+
     return participation
 
 @router.patch("/participation/{id}/reject", response_model=EmployeeParticipationRead)

@@ -117,3 +117,24 @@ class RewardRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EmployeeBadgeRead(BaseModel):
+    id: int
+    employee_id: int
+    badge_id: int
+    awarded_at: datetime
+    badge: Optional[BadgeRead] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RewardRedemptionRead(BaseModel):
+    id: int
+    employee_id: int
+    reward_id: int
+    points_spent: int
+    redeemed_at: datetime
+    reward: Optional[RewardRead] = None
+
+    model_config = ConfigDict(from_attributes=True)

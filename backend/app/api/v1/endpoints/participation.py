@@ -181,6 +181,9 @@ async def approve_unified_participation(
         await db.commit()
         await db.refresh(part)
 
+        from app.services.gamification import evaluate_badges_for_employee
+        await evaluate_badges_for_employee(db, emp.id)
+
         return UnifiedParticipationRead(
             id=part.id,
             source_type="csr",
@@ -262,6 +265,9 @@ async def approve_unified_participation(
 
         await db.commit()
         await db.refresh(part)
+
+        from app.services.gamification import evaluate_badges_for_employee
+        await evaluate_badges_for_employee(db, emp.id)
 
         return UnifiedParticipationRead(
             id=part.id,
