@@ -13,6 +13,7 @@ from app.api.v1.endpoints.environmental_goals import router as environmental_goa
 from app.api.v1.endpoints.badges import router as badges_router
 from app.api.v1.endpoints.rewards import router as rewards_router
 from app.api.v1.endpoints.gamification_services import router as gamification_services_router
+from app.api.v1.endpoints.scores import router as scores_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -29,3 +30,4 @@ api_router.include_router(environmental_goals_router, prefix="/environmental-goa
 api_router.include_router(badges_router, prefix="/badges", tags=["badges"])
 api_router.include_router(rewards_router, prefix="/rewards", tags=["rewards"])
 api_router.include_router(gamification_services_router, tags=["gamification-services"])
+api_router.include_router(scores_router, prefix="/scores", tags=["esg-scores"])
