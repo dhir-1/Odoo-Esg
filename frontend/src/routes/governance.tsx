@@ -82,27 +82,12 @@ export function GovernancePage() {
         apiFetch<ESGPolicy[]>("/governance/policies/"),
         apiFetch<Audit[]>("/governance/audits/"),
         apiFetch<ComplianceIssue[]>("/governance/compliance-issues/"),
-        apiFetch<Employee[]>("/departments/").then(depts => {
-          // Flatten employees from departments or mock names for dropdown selection
-          return apiFetch<Employee[]>("/auth/me").then(me => [me]);
-        }).catch(() => [])
+        apiFetch<Employee[]>("/employees/", { params: { limit: 100, status: "Active" } })
       ]);
       setPolicies(pols);
       setAudits(auds);
       setIssues(iss);
-      
-      // Load actual users list if Admin/Manager for owner dropdowns
-      if (user?.role !== "Employee") {
-        try {
-          const listRes = await apiFetch<any[]>("/governance/policies/1/unacknowledged-employees").catch(() => []);
-          // Use unacknowledged or fetch a fallback list
-          setEmployees(listRes.length > 0 ? listRes : (user ? [user] : []));
-        } catch {
-          if (user) setEmployees([user]);
-        }
-      } else {
-        if (user) setEmployees([user]);
-      }
+      setEmployees(emps);
     } catch (err: any) {
       toast.error(err.message || "Failed to load Governance module data.");
     } finally {

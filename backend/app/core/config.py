@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # DB Configuration
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ecosphere"
+    DATABASE_URL: str
     
     # JWT Configuration
-    JWT_SECRET_KEY: str = "supersecretkeychangeinprod1234567890abcdef"
+    JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 480  # 8 hours
     

@@ -9,6 +9,7 @@ import { QuickActions } from "@/components/ecosphere/quick-actions";
 import { apiFetch } from "@/lib/api-client";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
+import { type ActivityType } from "@/lib/dashboard-mock-data";
 
 interface SummaryData {
   environmental_score: number;
@@ -33,8 +34,15 @@ interface RankPoint {
 
 interface ActivityItem {
   id: number;
+  type: ActivityType;
+  text: string;
+  timestamp: string;
+}
+
+interface DashboardActivityLog {
+  id: number;
   event_type: string;
-  actor_name: string;
+  actor_name: string | null;
   summary_text: string;
   created_at: string;
 }
@@ -68,7 +76,7 @@ export function DashboardPage() {
   });
   const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [ranking, setRanking] = useState<RankPoint[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [activities, setActivities] = useState<DashboardActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +87,7 @@ export function DashboardPage() {
       const rankingPromise = user?.role === "Admin"
         ? apiFetch<RankPoint[]>("/dashboard/department-ranking")
         : Promise.resolve([]);
-      const activitiesPromise = apiFetch<ActivityItem[]>("/dashboard/recent-activity");
+      const activitiesPromise = apiFetch<DashboardActivityLog[]>("/dashboard/recent-activity");
 
       const [summaryData, trendData, rankingData, activitiesData] = await Promise.all([
         summaryPromise,
@@ -168,12 +176,29 @@ export function DashboardPage() {
   // Format Recharts data shapes
   const rechartsTrend = trend.map((t) => ({
     month: t.period,
-    emissions: t.co2e,
+    co2e: t.co2e,
   }));
 
   const rechartsRanking = ranking.map((r) => ({
-    name: r.department_name,
+    department: r.department_name,
     score: r.total_score,
+  }));
+
+  const activityFeed: ActivityItem[] = activities.map((activity) => ({
+    id: activity.id,
+    type:
+      activity.event_type.includes("WARNING")
+        ? "warning"
+        : activity.event_type.includes("DOCUMENT")
+          ? "document"
+          : activity.event_type.includes("CARBON")
+            ? "info"
+            : "success",
+    text: activity.summary_text,
+    timestamp: new Date(activity.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   }));
 
   return (
@@ -259,12 +284,7 @@ export function DashboardPage() {
           className="grid grid-cols-1 gap-4 lg:grid-cols-2"
         >
           <Card className="h-full">
-            <RecentActivity items={activities.map((a) => ({
-              id: a.id,
-              user: a.actor_name || "System",
-              action: a.summary_text,
-              time: new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            }))} />
+            <RecentActivity items={activityFeed} />
           </Card>
           <Card className="h-full">
             <QuickActions />
@@ -274,4 +294,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

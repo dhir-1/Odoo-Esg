@@ -14,12 +14,66 @@ from app.models.enums import (
     ActivityLogEventTypeEnum,
     NotificationTypeEnum
 )
-from app.core.permissions import require_role, has_department_access
+from app.core.permissions import get_current_user, require_role, has_department_access
 from app.schemas.participation import UnifiedParticipationRead
 from app.services.activity_log import log_activity
 from app.services.settings import get_esg_config
 
 router = APIRouter()
+
+
+@router.get("/me", response_model=List[UnifiedParticipationRead])
+async def list_my_participations(
+    db: AsyncSession = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
+    csr_query = (
+        select(EmployeeParticipation, CSRActivity)
+        .join(CSRActivity, EmployeeParticipation.activity_id == CSRActivity.id)
+        .filter(EmployeeParticipation.employee_id == current_user.id)
+    )
+
+    challenge_query = (
+        select(ChallengeParticipation, Challenge)
+        .join(Challenge, ChallengeParticipation.challenge_id == Challenge.id)
+        .filter(ChallengeParticipation.employee_id == current_user.id)
+    )
+
+    csr_res = await db.execute(csr_query)
+    challenge_res = await db.execute(challenge_query)
+
+    unified_list = []
+
+    for ep, activity in csr_res.all():
+        unified_list.append(
+            UnifiedParticipationRead(
+                id=ep.id,
+                source_type="csr",
+                employee_id=current_user.id,
+                employee_name=current_user.full_name,
+                item_title=activity.title,
+                proof_url=ep.proof_url,
+                points_or_xp=activity.points_value,
+                approval_status=ep.approval_status,
+            )
+        )
+
+    for cp, challenge in challenge_res.all():
+        unified_list.append(
+            UnifiedParticipationRead(
+                id=cp.id,
+                source_type="challenge",
+                employee_id=current_user.id,
+                employee_name=current_user.full_name,
+                item_title=challenge.title,
+                proof_url=cp.proof_url,
+                points_or_xp=challenge.xp_reward,
+                approval_status=cp.approval_status,
+            )
+        )
+
+    unified_list.sort(key=lambda x: (x.source_type, x.id), reverse=True)
+    return unified_list
 
 @router.get("/pending", response_model=List[UnifiedParticipationRead])
 async def list_pending_participations(

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { apiFetch } from "@/lib/api-client";
 
 export interface Employee {
-  id: int;
+  id: number;
   employee_code: string;
   full_name: string;
   email: string;

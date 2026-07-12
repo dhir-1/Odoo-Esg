@@ -5,7 +5,7 @@ import { Badge } from "@/components/ecosphere/badge";
 import { apiFetch } from "@/lib/api-client";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
-import { Trophy, Gift, Award, Star, Flame, CheckCircle, Lock, Compass, Plus } from "lucide-react";
+import { Trophy, Gift, Award, Star, Flame, CheckCircle, Lock, Compass, Plus, UserRound, Building2 } from "lucide-react";
 
 interface Challenge {
   id: number;
@@ -55,10 +55,19 @@ interface Reward {
 
 interface LeaderboardEntry {
   rank: number;
-  employee_id: number;
-  full_name: string;
-  department_name: string;
-  xp_points: number;
+  entry_type: "employee" | "department";
+  id: number;
+  name: string;
+  value: number;
+}
+
+interface UnifiedParticipation {
+  id: number;
+  source_type: "csr" | "challenge";
+  item_title: string;
+  proof_url?: string | null;
+  approval_status: string;
+  points_or_xp: number;
 }
 
 export function GamificationPage() {
@@ -67,7 +76,7 @@ export function GamificationPage() {
   
   // Data lists
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [myParticipations, setMyParticipations] = useState<ChallengeParticipation[]>([]);
+  const [myParticipations, setMyParticipations] = useState<UnifiedParticipation[]>([]);
   const [allBadges, setAllBadges] = useState<BadgeItem[]>([]);
   const [earnedBadges, setEarnedBadges] = useState<EmployeeBadge[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -84,11 +93,12 @@ export function GamificationPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [challs, bgs, rewds, lead] = await Promise.all([
+      const [challs, bgs, rewds, lead, mine] = await Promise.all([
         apiFetch<Challenge[]>("/challenges/challenges/"),
         apiFetch<BadgeItem[]>("/badges/"),
         apiFetch<Reward[]>("/rewards/"),
-        apiFetch<LeaderboardEntry[]>("/leaderboard")
+        apiFetch<LeaderboardEntry[]>("/leaderboard"),
+        apiFetch<UnifiedParticipation[]>("/participation/me")
       ]);
 
       // Load user earned badges if logged in
@@ -106,6 +116,7 @@ export function GamificationPage() {
       setEarnedBadges(earned);
       setRewards(rewds);
       setLeaderboard(lead);
+      setMyParticipations(mine);
       setError(null);
     } catch (err: any) {
       toast.error(err.message || "Failed to load Gamification system data.");
@@ -114,40 +125,9 @@ export function GamificationPage() {
     }
   };
 
-  const loadMyParticipations = async () => {
-    // There is no explicit list of personal participations, so we infer them from challenge details or hit a filter
-    // Let's load the detail of each challenge to find ones the user joined, or build dynamic mock records.
-    try {
-      const joinedList: ChallengeParticipation[] = [];
-      // Query individual details of challenges to check has_joined
-      for (const ch of challenges.slice(0, 10)) {
-        try {
-          const detail = await apiFetch<any>(`/challenges/challenges/${ch.id}`);
-          if (detail.has_joined) {
-            joinedList.push({
-              id: ch.id, // Maps to participation container id
-              challenge_id: ch.id,
-              challenge_title: ch.title,
-              progress: 0,
-              approval_status: "PENDING",
-              xp_awarded: 0
-            });
-          }
-        } catch {}
-      }
-      setMyParticipations(joinedList);
-    } catch {}
-  };
-
   useEffect(() => {
     loadData();
   }, [user]);
-
-  useEffect(() => {
-    if (challenges.length > 0) {
-      loadMyParticipations();
-    }
-  }, [challenges]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -229,7 +209,7 @@ export function GamificationPage() {
           <div>
             <div className="text-xs font-semibold text-gold-700 uppercase tracking-wide">Workplace Rank</div>
             <div className="font-display text-xl font-bold text-foreground">
-              #{leaderboard.find(l => l.employee_id === user?.id)?.rank || "10+"} Overall
+              #{leaderboard.find(l => l.entry_type === "employee" && l.id === user?.id)?.rank || "10+"} Overall
             </div>
           </div>
         </div>
@@ -350,24 +330,32 @@ export function GamificationPage() {
             myParticipations.map((part) => (
               <Card key={part.id} accent="gold" className="flex flex-col justify-between h-full">
                 <div>
-                  <h3 className="font-display text-lg font-bold text-foreground mb-4">{part.challenge_title || `Challenge #${part.challenge_id}`}</h3>
+                  <div className="mb-2">
+                    <Badge variant={part.source_type === "challenge" ? "gold" : "secondary"}>
+                      {part.source_type === "challenge" ? "Challenge" : "CSR"}
+                    </Badge>
+                  </div>
+                  <h3 className="font-display text-lg font-bold text-foreground mb-4">{part.item_title}</h3>
                   <div className="mb-4">
                     <div className="flex justify-between text-xs font-semibold mb-1">
                       <span>Completion Status</span>
-                      <span>{part.progress}%</span>
+                      <span>{part.approval_status}</span>
                     </div>
-                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-gold animate-pulse" style={{ width: `${part.progress}%` }} />
+                    <div className="text-xs text-muted-foreground">
+                      Reward: {part.points_or_xp} {part.source_type === "challenge" ? "XP" : "points"}
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-4">
-                    Approval state: <Badge variant="info">{part.approval_status}</Badge>
+                    {part.proof_url && (
+                      <a
+                        href={part.proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block text-xs text-gold hover:underline"
+                      >
+                        View proof
+                      </a>
+                    )}
                   </div>
                 </div>
-
-                <Button variant="outline" size="sm" className="w-full" onClick={() => setSubmittingProgressId(part.id)}>
-                  Submit Progress
-                </Button>
               </Card>
             ))
           )}
@@ -442,22 +430,32 @@ export function GamificationPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="p-4 font-semibold text-muted-foreground uppercase text-xs text-center w-16">Rank</th>
-                <th className="p-4 font-semibold text-muted-foreground uppercase text-xs">Full Name</th>
-                <th className="p-4 font-semibold text-muted-foreground uppercase text-xs">Department</th>
-                <th className="p-4 font-semibold text-muted-foreground uppercase text-xs text-right">XP Points</th>
+                <th className="p-4 font-semibold text-muted-foreground uppercase text-xs">Entry</th>
+                <th className="p-4 font-semibold text-muted-foreground uppercase text-xs text-right">Value</th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.map((l) => (
-                <tr key={l.employee_id} className={`border-b border-border hover:bg-muted/10 transition-colors ${l.employee_id === user?.id ? "bg-gold-50/40" : ""}`}>
+                <tr
+                  key={`${l.entry_type}-${l.id}`}
+                  className={`border-b border-border hover:bg-muted/10 transition-colors ${
+                    l.entry_type === "employee" && l.id === user?.id ? "bg-gold-50/40" : ""
+                  }`}
+                >
                   <td className="p-4 text-center font-display font-bold">
                     {l.rank === 1 ? "🥇" : l.rank === 2 ? "🥈" : l.rank === 3 ? "🥉" : l.rank}
                   </td>
-                  <td className="p-4 font-medium text-foreground flex items-center gap-2">
-                    {l.full_name} {l.employee_id === user?.id && <Badge variant="gold">You</Badge>}
+                  <td className="p-4 font-medium text-foreground">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={l.entry_type === "department" ? "secondary" : "accent"} className="flex items-center gap-1">
+                        {l.entry_type === "department" ? <Building2 className="h-3.5 w-3.5" /> : <UserRound className="h-3.5 w-3.5" />}
+                        {l.entry_type === "department" ? "Department" : "Employee"}
+                      </Badge>
+                      <span>{l.name}</span>
+                      {l.entry_type === "employee" && l.id === user?.id && <Badge variant="gold">You</Badge>}
+                    </div>
                   </td>
-                  <td className="p-4 text-muted-foreground">{l.department_name}</td>
-                  <td className="p-4 font-body font-bold text-right text-gold">{l.xp_points} XP</td>
+                  <td className="p-4 font-body font-bold text-right text-gold">{l.value}</td>
                 </tr>
               ))}
             </tbody>

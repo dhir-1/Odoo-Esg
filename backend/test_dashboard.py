@@ -1,4 +1,5 @@
 import asyncio
+import os
 import httpx
 import logging
 
@@ -6,6 +7,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 BASE_REST = "http://127.0.0.1:8000/api/v1"
+ADMIN_EMAIL = os.getenv("ECOSPHERE_ADMIN_EMAIL", "your-admin-email-here")
+ADMIN_PASSWORD = os.getenv("ECOSPHERE_ADMIN_PASSWORD", "your-admin-password-here")
+MANAGER_EMAIL = os.getenv("ECOSPHERE_MANAGER_EMAIL", "your-manager-email-here")
+MANAGER_PASSWORD = os.getenv("ECOSPHERE_MANAGER_PASSWORD", "your-manager-password-here")
 
 
 async def main():
@@ -13,7 +18,7 @@ async def main():
         # 1. Login as Admin
         logger.info("Logging in as Admin...")
         admin_login = await client.post(f"{BASE_REST}/auth/login", json={
-            "email": "admin@ecosphere.com", "password": "adminpassword"
+            "email": ADMIN_EMAIL, "password": ADMIN_PASSWORD
         })
         assert admin_login.status_code == 200
         admin_token = admin_login.json()["access_token"]
@@ -22,7 +27,7 @@ async def main():
         # 2. Login as Manager (Employee 2)
         logger.info("Logging in as Manager...")
         mgr_login = await client.post(f"{BASE_REST}/auth/login", json={
-            "email": "manager@ecosphere.com", "password": "managerpassword"
+            "email": MANAGER_EMAIL, "password": MANAGER_PASSWORD
         })
         assert mgr_login.status_code == 200
         mgr_token = mgr_login.json()["access_token"]

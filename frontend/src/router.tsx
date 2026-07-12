@@ -93,9 +93,4 @@ export const router = createBrowserRouter([
     path: "*",
     element: withAppLayout(<NotFoundPage />),
   },
-], {
-  future: {
-    v7_startTransition: true,
-  },
-});
-
+]);

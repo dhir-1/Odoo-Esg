@@ -1,4 +1,5 @@
 import asyncio
+import os
 import httpx
 import logging
 from datetime import date, timedelta
@@ -7,6 +8,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 BASE_REST = "http://127.0.0.1:8000/api/v1"
+ADMIN_EMAIL = os.getenv("ECOSPHERE_ADMIN_EMAIL", "your-admin-email-here")
+ADMIN_PASSWORD = os.getenv("ECOSPHERE_ADMIN_PASSWORD", "your-admin-password-here")
+MANAGER_EMAIL = os.getenv("ECOSPHERE_MANAGER_EMAIL", "your-manager-email-here")
+MANAGER_PASSWORD = os.getenv("ECOSPHERE_MANAGER_PASSWORD", "your-manager-password-here")
 
 async def run_smoke_test():
     async with httpx.AsyncClient(timeout=30) as client:
@@ -15,8 +20,8 @@ async def run_smoke_test():
         # =====================================================================
         logger.info("Step 1: Logging in as Admin...")
         admin_login = await client.post(f"{BASE_REST}/auth/login", json={
-            "email": "admin@ecosphere.com",
-            "password": "adminpassword"
+            "email": ADMIN_EMAIL,
+            "password": ADMIN_PASSWORD
         })
         if admin_login.status_code != 200:
             logger.error(f"Admin login failed: {admin_login.text}")
@@ -100,7 +105,7 @@ async def run_smoke_test():
             "employee_code": emp_code,
             "full_name": "Smoke Employee User",
             "email": f"employee-{emp_code.lower()}@ecosphere.com",
-            "password": "employeepassword",
+            "password": os.getenv("ECOSPHERE_EMPLOYEE_PASSWORD", "your-employee-password-here"),
             "role": "Employee",
             "department_id": dept_id,
             "designation": "Sustainability Officer",
@@ -114,7 +119,7 @@ async def run_smoke_test():
         # Log in as Employee
         emp_login = await client.post(f"{BASE_REST}/auth/login", json={
             "email": f"employee-{emp_code.lower()}@ecosphere.com",
-            "password": "employeepassword"
+            "password": os.getenv("ECOSPHERE_EMPLOYEE_PASSWORD", "your-employee-password-here")
         })
         assert emp_login.status_code == 200
         emp_token = emp_login.json()["access_token"]

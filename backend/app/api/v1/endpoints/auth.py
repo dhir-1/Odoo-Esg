@@ -138,25 +138,3 @@ async def register(
 @router.get("/me", response_model=EmployeeRead)
 async def get_me(current_user: Employee = Depends(get_current_user)):
     return current_user
-
-# Test Endpoints for Role Checks
-@router.get("/test-employee")
-async def test_employee_route(current_user: Employee = Depends(require_role("Employee", "Manager", "Admin"))):
-    return {
-        "message": f"Hello {current_user.full_name}, you have accessed the Employee test route!",
-        "your_role": current_user.role.value
-    }
-
-@router.get("/test-manager")
-async def test_manager_route(current_user: Employee = Depends(require_role("Manager", "Admin"))):
-    return {
-        "message": f"Hello {current_user.full_name}, you have accessed the Manager test route!",
-        "your_role": current_user.role.value
-    }
-
-@router.get("/test-admin")
-async def test_admin_route(current_user: Employee = Depends(require_role("Admin"))):
-    return {
-        "message": f"Hello {current_user.full_name}, you have accessed the Admin test route!",
-        "your_role": current_user.role.value
-    }
