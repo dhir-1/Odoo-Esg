@@ -1,5 +1,6 @@
 from typing import Optional, List
-from sqlalchemy import String, Integer, ForeignKey, Enum as SQLEnum
+from datetime import date, datetime
+from sqlalchemy import String, Integer, ForeignKey, Enum as SQLEnum, Date, DateTime, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.mixins import TimestampMixin
@@ -44,3 +45,19 @@ class Department(Base, TimestampMixin):
         foreign_keys="[Employee.department_id]",
         back_populates="department"
     )
+
+class DepartmentScore(Base):
+    __tablename__ = "department_scores"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    department_id: Mapped[int] = mapped_column(Integer, ForeignKey("departments.id"), nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    environmental_score: Mapped[float] = mapped_column(Numeric(precision=5, scale=2), nullable=False)
+    social_score: Mapped[float] = mapped_column(Numeric(precision=5, scale=2), nullable=False)
+    governance_score: Mapped[float] = mapped_column(Numeric(precision=5, scale=2), nullable=False)
+    total_score: Mapped[float] = mapped_column(Numeric(precision=5, scale=2), nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    # Relationships
+    department: Mapped["Department"] = relationship("Department")
