@@ -44,3 +44,15 @@ class EmployeeRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class EmployeeSearchRead(BaseModel):
+    id: int
+    full_name: str
+    email: EmailStr
+    role: RoleEnum
+    department_id: int
+    department_name: Optional[str] = None
+    status: StatusEnum
+
+    model_config = ConfigDict(from_attributes=True)
+

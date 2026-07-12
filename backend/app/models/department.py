@@ -46,6 +46,15 @@ class Department(Base, TimestampMixin):
         back_populates="department"
     )
 
+    @property
+    def head_employee_name(self) -> Optional[str]:
+        return self.head_employee.full_name if self.head_employee else None
+
+    @property
+    def parent_department_name(self) -> Optional[str]:
+        return self.parent_department.name if self.parent_department else None
+
+
 class DepartmentScore(Base):
     __tablename__ = "department_scores"
 

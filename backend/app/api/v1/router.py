@@ -16,9 +16,15 @@ from app.api.v1.endpoints.gamification_services import router as gamification_se
 from app.api.v1.endpoints.scores import router as scores_router
 from app.api.v1.endpoints.notifications import router as notifications_router
 from app.api.v1.endpoints.ws import router as ws_router
+from app.api.v1.endpoints.reports import router as reports_router
+from app.api.v1.endpoints.settings import router as settings_router
+from app.api.v1.endpoints.dashboard import router as dashboard_router
+from app.api.v1.endpoints.employees import router as employees_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+
 api_router.include_router(departments_router, prefix="/departments", tags=["departments"])
 api_router.include_router(carbon_router, prefix="/carbon-transactions", tags=["carbon-transactions"])
 api_router.include_router(social_router, prefix="/csr", tags=["social-initiatives"])
@@ -35,3 +41,7 @@ api_router.include_router(gamification_services_router, tags=["gamification-serv
 api_router.include_router(scores_router, prefix="/scores", tags=["esg-scores"])
 api_router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(ws_router, prefix="/ws", tags=["websockets"])
+api_router.include_router(reports_router, prefix="/reports", tags=["reports"])
+api_router.include_router(settings_router, prefix="/settings", tags=["settings"])
+api_router.include_router(dashboard_router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(employees_router, prefix="/employees", tags=["employees"])

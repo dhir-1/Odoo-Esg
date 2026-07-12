@@ -2,6 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from app.db.database import get_db
 from app.models.department import Department
 from app.models.employee import Employee
@@ -74,8 +76,12 @@ async def create_department(
     )
     db.add(new_dept)
     await db.commit()
-    await db.refresh(new_dept)
-    return new_dept
+    res = await db.execute(
+        select(Department)
+        .options(selectinload(Department.head_employee), selectinload(Department.parent_department))
+        .filter(Department.id == new_dept.id)
+    )
+    return res.scalars().first()
 
 @router.get("/", response_model=List[DepartmentRead])
 async def list_departments(
@@ -85,7 +91,10 @@ async def list_departments(
     db: AsyncSession = Depends(get_db),
     current_user: Employee = Depends(get_current_user)
 ):
-    query = select(Department)
+    query = select(Department).options(
+        selectinload(Department.head_employee),
+        selectinload(Department.parent_department)
+    )
     if status is not None:
         query = query.filter(Department.status == status)
     
@@ -99,7 +108,11 @@ async def get_department(
     db: AsyncSession = Depends(get_db),
     current_user: Employee = Depends(get_current_user)
 ):
-    result = await db.execute(select(Department).filter(Department.id == id))
+    result = await db.execute(
+        select(Department)
+        .options(selectinload(Department.head_employee), selectinload(Department.parent_department))
+        .filter(Department.id == id)
+    )
     dept = result.scalars().first()
     if not dept:
         raise HTTPException(
@@ -174,8 +187,12 @@ async def update_department(
         setattr(dept, key, value)
 
     await db.commit()
-    await db.refresh(dept)
-    return dept
+    res = await db.execute(
+        select(Department)
+        .options(selectinload(Department.head_employee), selectinload(Department.parent_department))
+        .filter(Department.id == id)
+    )
+    return res.scalars().first()
 
 @router.delete("/{id}", response_model=DepartmentRead)
 async def delete_department(
@@ -194,5 +211,9 @@ async def delete_department(
     # Perform soft-deactivation
     dept.status = StatusEnum.INACTIVE
     await db.commit()
-    await db.refresh(dept)
-    return dept
+    res = await db.execute(
+        select(Department)
+        .options(selectinload(Department.head_employee), selectinload(Department.parent_department))
+        .filter(Department.id == id)
+    )
+    return res.scalars().first()

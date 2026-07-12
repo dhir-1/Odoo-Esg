@@ -26,5 +26,8 @@ class DepartmentRead(DepartmentBase):
     employee_count: int
     created_at: datetime
     updated_at: datetime
+    head_employee_name: Optional[str] = None
+    parent_department_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
