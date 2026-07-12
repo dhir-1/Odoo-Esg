@@ -7,6 +7,7 @@ import { GovernancePage } from "./routes/governance";
 import { GamificationPage } from "./routes/gamification";
 import { ReportsPage } from "./routes/reports";
 import { SettingsPage } from "./routes/settings";
+import { ProfilePage } from "./routes/profile";
 import { LoginPage } from "./routes/login";
 import { useAuth } from "./contexts/auth-context";
 
@@ -88,6 +89,10 @@ export const router = createBrowserRouter([
   {
     path: "/settings",
     element: withAppLayout(<SettingsPage />),
+  },
+  {
+    path: "/profile",
+    element: withAppLayout(<ProfilePage />),
   },
   {
     path: "*",

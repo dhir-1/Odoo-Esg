@@ -7,7 +7,7 @@ from app.models.department import Department
 from app.models.enums import RoleEnum, StatusEnum
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.permissions import get_current_user, require_role
-from app.schemas.auth import UserLogin, UserRegister, UserSignup, Token, EmployeeRead
+from app.schemas.auth import UserLogin, UserRegister, UserSignup, Token, EmployeeRead, PasswordChangeRequest
 
 router = APIRouter()
 
@@ -138,3 +138,20 @@ async def register(
 @router.get("/me", response_model=EmployeeRead)
 async def get_me(current_user: Employee = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/change-password")
+async def change_password(
+    payload: PasswordChangeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+
+    current_user.password_hash = get_password_hash(payload.new_password)
+    await db.commit()
+    return {"detail": "Password updated successfully."}

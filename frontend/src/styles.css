@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * EcoSphere design system.
+ * Soteria design system.
  *
  * Warm, organic editorial palette. Tokens are defined as CSS custom properties
  * using oklch() and exposed to Tailwind utilities via the @theme inline block.

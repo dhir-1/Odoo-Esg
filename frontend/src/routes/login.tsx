@@ -5,7 +5,7 @@ import { Card } from "@/components/ecosphere/card";
 import { Button } from "@/components/ecosphere/button";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
-import { Leaf, UserPlus, LogIn } from "lucide-react";
+import { UserPlus, LogIn } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +28,7 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<"login" | "register" | "reset">("login");
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [confirmLoginOpen, setConfirmLoginOpen] = useState(false);
 
   const [email, setEmail] = useState("");
@@ -40,8 +40,6 @@ export function LoginPage() {
   const [departmentId, setDepartmentId] = useState<number | "">("");
   const [designation, setDesignation] = useState("Sustainability Advocate");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
-  const [resetPassword, setResetPassword] = useState("");
-  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
 
   useEffect(() => {
     if (mode === "register" && departments.length === 0) {
@@ -67,7 +65,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      toast.success("Successfully logged in!");
+      toast.success("Successfully logged in to Soteria!");
       navigate("/");
     } catch (err: any) {
       setError(err.message || "Failed to log in. Please check credentials.");
@@ -108,7 +106,7 @@ export function LoginPage() {
       });
 
       sessionStorage.setItem("token", result.access_token);
-      toast.success("Account created! Welcome to EcoSphere 🌿");
+      toast.success("Account created! Welcome to Soteria.");
       window.location.href = "/";
     } catch (err: any) {
       setError(err.message || "Registration failed.");
@@ -118,35 +116,19 @@ export function LoginPage() {
     }
   };
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      toast.error("Please enter your email address first.");
-      return;
-    }
-    if (!resetPassword || !resetConfirmPassword) {
-      toast.error("Please enter and confirm your new password.");
-      return;
-    }
-    if (resetPassword !== resetConfirmPassword) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    toast.success("Password reset request captured for this demo flow.");
-    setMode("login");
-    setResetPassword("");
-    setResetConfirmPassword("");
-  };
-
   const resetForm = () => {
     setEmail("");
     setPassword("");
     setFullName("");
     setDepartmentId("");
     setDesignation("Sustainability Advocate");
-    setResetPassword("");
-    setResetConfirmPassword("");
     setError(null);
+  };
+
+  const switchMode = (nextMode: "login" | "register") => {
+    setMode(nextMode);
+    setError(null);
+    resetForm();
   };
 
   const inputClass =
@@ -159,23 +141,21 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <Card hover={false} className="w-full max-w-md p-8" accent="primary">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Leaf className="h-6 w-6" />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-background shadow-sm ring-1 ring-border">
+            <img src="/brand-logo.svg" alt="" className="h-10 w-10" />
           </div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
-            {mode === "register" ? "Create account" : mode === "reset" ? "Reset password" : "Welcome back"}
+            {mode === "register" ? "Create account" : "Welcome back"}
           </h1>
           <p className="mt-2 font-body text-sm text-muted-foreground">
             {mode === "register"
-              ? "Join the EcoSphere sustainability platform"
-              : mode === "reset"
-                ? "Request a password reset for your EcoSphere account"
-                : "Sign in to your EcoSphere portal"}
+              ? "Join the Soteria sustainability platform"
+              : "Sign in to your Soteria portal"}
           </p>
         </div>
 
         <form
-          onSubmit={mode === "register" ? handleSignup : mode === "reset" ? handlePasswordReset : handleLogin}
+          onSubmit={mode === "register" ? handleSignup : handleLogin}
           className="mt-8 space-y-5"
         >
           {error && (
@@ -213,60 +193,25 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className={inputClass}
-                placeholder="you@ecosphere.com"
+                placeholder="you@soteria.com"
               />
             </div>
 
-            {mode !== "reset" ? (
-              <div>
-                <label htmlFor="password" className={labelClass}>
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className={inputClass}
-                  placeholder="••••••••"
-                />
-              </div>
-            ) : (
-              <>
-                <div>
-                  <label htmlFor="resetPassword" className={labelClass}>
-                    New password
-                  </label>
-                  <input
-                    id="resetPassword"
-                    type="password"
-                    value={resetPassword}
-                    onChange={(e) => setResetPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className={inputClass}
-                    placeholder="Create a new password"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="resetConfirmPassword" className={labelClass}>
-                    Confirm new password
-                  </label>
-                  <input
-                    id="resetConfirmPassword"
-                    type="password"
-                    value={resetConfirmPassword}
-                    onChange={(e) => setResetConfirmPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className={inputClass}
-                    placeholder="Confirm new password"
-                  />
-                </div>
-              </>
-            )}
+            <div>
+              <label htmlFor="password" className={labelClass}>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </div>
 
             {mode === "register" && (
               <>
@@ -319,8 +264,6 @@ export function LoginPage() {
                 <UserPlus className="h-4 w-4" />
                 {loading ? "Creating account..." : "Create account"}
               </>
-            ) : mode === "reset" ? (
-              "Send reset request"
             ) : (
               <>
                 <LogIn className="h-4 w-4" />
@@ -330,50 +273,38 @@ export function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 space-y-2 text-center">
-          {mode !== "reset" && (
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === "register" ? "login" : "register");
-                resetForm();
-              }}
-              className="font-body text-sm text-primary underline-offset-4 transition-colors hover:underline hover:text-primary/80"
-            >
-              {mode === "register" ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-            </button>
-          )}
+        <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={() => setMode(mode === "reset" ? "login" : "reset")}
-            className="block w-full font-body text-sm text-muted-foreground underline-offset-4 transition-colors hover:underline hover:text-foreground"
+            onClick={() => switchMode(mode === "login" ? "register" : "login")}
+            className="font-body text-sm text-primary hover:underline"
           >
-            {mode === "reset" ? "Back to sign in" : "Forgot password?"}
+            {mode === "login" ? "Need an account? Register" : "Already have an account? Sign in"}
           </button>
         </div>
-
-        <AlertDialog open={confirmLoginOpen} onOpenChange={setConfirmLoginOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Proceed with sign in?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Make sure this is the account you want to enter. You can still cancel and edit the fields.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async () => {
-                  setConfirmLoginOpen(false);
-                  await performLogin();
-                }}
-              >
-                Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </Card>
+
+      <AlertDialog open={confirmLoginOpen} onOpenChange={setConfirmLoginOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to sign in?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please confirm before continuing to your Soteria workspace.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmLoginOpen(false);
+                performLogin();
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

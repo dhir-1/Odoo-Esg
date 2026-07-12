@@ -11,6 +11,11 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class TokenData(BaseModel):
     email: Optional[str] = None
     role: Optional[RoleEnum] = None
@@ -64,4 +69,3 @@ class EmployeeSearchRead(BaseModel):
     status: StatusEnum
 
     model_config = ConfigDict(from_attributes=True)
-

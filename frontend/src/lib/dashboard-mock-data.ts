@@ -169,7 +169,7 @@ export const sampleEmissionFactors: EmissionFactorItem[] = [
 ];
 
 export const sampleProductProfiles: ProductProfileItem[] = [
-  { id: 1, product_name: "EcoSphere Laptop Sleeve", sku: "ES-CASE-01", category: "Accessories", sustainability_score: 88, status: "Active" },
+  { id: 1, product_name: "Soteria Laptop Sleeve", sku: "ES-CASE-01", category: "Accessories", sustainability_score: 88, status: "Active" },
   { id: 2, product_name: "Carbon Smart Bottle", sku: "ES-BTL-02", category: "Merch", sustainability_score: 81, status: "Active" },
   { id: 3, product_name: "Renewable Desk Lamp", sku: "ES-LAMP-03", category: "Office", sustainability_score: 76, status: "Draft" },
 ];
