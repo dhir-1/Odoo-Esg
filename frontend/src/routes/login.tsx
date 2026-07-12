@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ecosphere/card";
@@ -6,6 +6,16 @@ import { Button } from "@/components/ecosphere/button";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Leaf, UserPlus, LogIn } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DepartmentOption {
   id: number;
@@ -18,50 +28,41 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Mode toggle
-  const [isRegister, setIsRegister] = useState(false);
+  const [mode, setMode] = useState<"login" | "register" | "reset">("login");
+  const [confirmLoginOpen, setConfirmLoginOpen] = useState(false);
 
-  // Shared fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Register-only fields
   const [fullName, setFullName] = useState("");
   const [departmentId, setDepartmentId] = useState<number | "">("");
   const [designation, setDesignation] = useState("Sustainability Advocate");
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
 
-  // Fetch departments when register mode activates
   useEffect(() => {
-    if (isRegister && departments.length === 0) {
+    if (mode === "register" && departments.length === 0) {
       fetchDepartments();
     }
-  }, [isRegister]);
+  }, [mode, departments.length]);
 
   const fetchDepartments = async () => {
     try {
-      // Departments list is public-ish via settings, but we can try
-      // without auth — if it 401s, we'll handle it gracefully
-      const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
-      const res = await fetch(`${BASE_URL}/departments/public`);
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+      const res = await fetch(`${baseUrl}/departments/public`);
       if (res.ok) {
         const data = await res.json();
         setDepartments(data.filter((d: DepartmentOption) => d.status === "Active"));
       }
     } catch {
-      // Silently fail — user can still type a department ID
+      // Demo fallback only.
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error("Please enter email and password.");
-      return;
-    }
-
+  const performLogin = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -76,6 +77,15 @@ export function LoginPage() {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please enter email and password.");
+      return;
+    }
+    setConfirmLoginOpen(true);
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !password || !departmentId) {
@@ -86,21 +96,17 @@ export function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiFetch<{ access_token: string; token_type: string }>(
-        "/auth/signup",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            full_name: fullName,
-            email,
-            password,
-            department_id: Number(departmentId),
-            designation: designation || "Sustainability Advocate",
-          }),
-        }
-      );
+      const result = await apiFetch<{ access_token: string; token_type: string }>("/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          password,
+          department_id: Number(departmentId),
+          designation: designation || "Sustainability Advocate",
+        }),
+      });
 
-      // Store token and redirect — user is immediately logged in
       sessionStorage.setItem("token", result.access_token);
       toast.success("Account created! Welcome to EcoSphere 🌿");
       window.location.href = "/";
@@ -112,12 +118,34 @@ export function LoginPage() {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email address first.");
+      return;
+    }
+    if (!resetPassword || !resetConfirmPassword) {
+      toast.error("Please enter and confirm your new password.");
+      return;
+    }
+    if (resetPassword !== resetConfirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    toast.success("Password reset request captured for this demo flow.");
+    setMode("login");
+    setResetPassword("");
+    setResetConfirmPassword("");
+  };
+
   const resetForm = () => {
     setEmail("");
     setPassword("");
     setFullName("");
     setDepartmentId("");
     setDesignation("Sustainability Advocate");
+    setResetPassword("");
+    setResetConfirmPassword("");
     setError(null);
   };
 
@@ -131,21 +159,23 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <Card hover={false} className="w-full max-w-md p-8" accent="primary">
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground mb-4">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Leaf className="h-6 w-6" />
           </div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
-            {isRegister ? "Create account" : "Welcome back"}
+            {mode === "register" ? "Create account" : mode === "reset" ? "Reset password" : "Welcome back"}
           </h1>
           <p className="mt-2 font-body text-sm text-muted-foreground">
-            {isRegister
+            {mode === "register"
               ? "Join the EcoSphere sustainability platform"
-              : "Sign in to your EcoSphere portal"}
+              : mode === "reset"
+                ? "Request a password reset for your EcoSphere account"
+                : "Sign in to your EcoSphere portal"}
           </p>
         </div>
 
         <form
-          onSubmit={isRegister ? handleSignup : handleLogin}
+          onSubmit={mode === "register" ? handleSignup : mode === "reset" ? handlePasswordReset : handleLogin}
           className="mt-8 space-y-5"
         >
           {error && (
@@ -155,8 +185,7 @@ export function LoginPage() {
           )}
 
           <div className="space-y-4">
-            {/* Register-only: Full Name */}
-            {isRegister && (
+            {mode === "register" && (
               <div>
                 <label htmlFor="fullName" className={labelClass}>
                   Full Name
@@ -173,7 +202,6 @@ export function LoginPage() {
               </div>
             )}
 
-            {/* Email */}
             <div>
               <label htmlFor="email" className={labelClass}>
                 Email address
@@ -189,77 +217,110 @@ export function LoginPage() {
               />
             </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className={labelClass}>
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {/* Register-only: Department */}
-            {isRegister && (
+            {mode !== "reset" ? (
               <div>
-                <label htmlFor="department" className={labelClass}>
-                  Department
-                </label>
-                <select
-                  id="department"
-                  value={departmentId}
-                  onChange={(e) => setDepartmentId(Number(e.target.value))}
-                  required
-                  className={inputClass}
-                >
-                  <option value="" disabled>
-                    Select your department
-                  </option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name} ({dept.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Register-only: Designation */}
-            {isRegister && (
-              <div>
-                <label htmlFor="designation" className={labelClass}>
-                  Designation
+                <label htmlFor="password" className={labelClass}>
+                  Password
                 </label>
                 <input
-                  id="designation"
-                  type="text"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
                   className={inputClass}
-                  placeholder="Sustainability Advocate"
+                  placeholder="••••••••"
                 />
               </div>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="resetPassword" className={labelClass}>
+                    New password
+                  </label>
+                  <input
+                    id="resetPassword"
+                    type="password"
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className={inputClass}
+                    placeholder="Create a new password"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="resetConfirmPassword" className={labelClass}>
+                    Confirm new password
+                  </label>
+                  <input
+                    id="resetConfirmPassword"
+                    type="password"
+                    value={resetConfirmPassword}
+                    onChange={(e) => setResetConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className={inputClass}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </>
+            )}
+
+            {mode === "register" && (
+              <>
+                <div>
+                  <label htmlFor="department" className={labelClass}>
+                    Department
+                  </label>
+                  <select
+                    id="department"
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(Number(e.target.value))}
+                    required
+                    className={inputClass}
+                  >
+                    <option value="" disabled>
+                      Select your department
+                    </option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name} ({dept.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="designation" className={labelClass}>
+                    Designation
+                  </label>
+                  <input
+                    id="designation"
+                    type="text"
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    className={inputClass}
+                    placeholder="Sustainability Advocate"
+                  />
+                </div>
+              </>
             )}
           </div>
 
           <Button
             type="submit"
             variant="primary"
-            className="w-full h-12 text-sm font-semibold flex items-center justify-center gap-2"
+            className="flex h-12 w-full items-center justify-center gap-2 text-sm font-semibold"
             disabled={loading}
           >
-            {isRegister ? (
+            {mode === "register" ? (
               <>
                 <UserPlus className="h-4 w-4" />
                 {loading ? "Creating account..." : "Create account"}
               </>
+            ) : mode === "reset" ? (
+              "Send reset request"
             ) : (
               <>
                 <LogIn className="h-4 w-4" />
@@ -269,21 +330,49 @@ export function LoginPage() {
           </Button>
         </form>
 
-        {/* Toggle link */}
-        <div className="mt-6 text-center">
+        <div className="mt-6 space-y-2 text-center">
+          {mode !== "reset" && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === "register" ? "login" : "register");
+                resetForm();
+              }}
+              className="font-body text-sm text-primary underline-offset-4 transition-colors hover:underline hover:text-primary/80"
+            >
+              {mode === "register" ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => {
-              setIsRegister(!isRegister);
-              resetForm();
-            }}
-            className="font-body text-sm text-primary hover:text-primary/80 underline-offset-4 hover:underline transition-colors"
+            onClick={() => setMode(mode === "reset" ? "login" : "reset")}
+            className="block w-full font-body text-sm text-muted-foreground underline-offset-4 transition-colors hover:underline hover:text-foreground"
           >
-            {isRegister
-              ? "Already have an account? Sign in"
-              : "Don't have an account? Sign up"}
+            {mode === "reset" ? "Back to sign in" : "Forgot password?"}
           </button>
         </div>
+
+        <AlertDialog open={confirmLoginOpen} onOpenChange={setConfirmLoginOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Proceed with sign in?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Make sure this is the account you want to enter. You can still cancel and edit the fields.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  setConfirmLoginOpen(false);
+                  await performLogin();
+                }}
+              >
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </Card>
     </div>
   );

@@ -51,6 +51,7 @@ export function SocialPage() {
   const [approvals, setApprovals] = useState<PendingParticipation[]>([]);
   const [report, setReport] = useState<SocialReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Modal / Form states
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -62,8 +63,12 @@ export function SocialPage() {
   const [selectedParticipationId, setSelectedParticipationId] = useState<number | null>(null);
   const [proofForm, setProofForm] = useState({ evidence_notes: "", evidence_attachment_url: "" });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [acts, pending, socialRep] = await Promise.all([
         apiFetch<CSRActivity[]>("/csr/csr-activities/"),
@@ -76,7 +81,8 @@ export function SocialPage() {
     } catch (err: any) {
       toast.error(err.message || "Failed to load Social module data.");
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false);
+      else setLoading(false);
     }
   };
 
@@ -98,7 +104,7 @@ export function SocialPage() {
       });
       toast.success("CSR Activity created successfully!");
       setShowCreateForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create activity.");
     }
@@ -108,7 +114,7 @@ export function SocialPage() {
     try {
       await apiFetch(`/csr/csr-activities/${id}/join`, { method: "POST" });
       toast.success("Successfully enrolled in CSR Activity!");
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to join activity.");
     }
@@ -125,7 +131,7 @@ export function SocialPage() {
       toast.success("Evidence submitted successfully and is pending review!");
       setSelectedParticipationId(null);
       setProofForm({ evidence_notes: "", evidence_attachment_url: "" });
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to submit proof.");
     }
@@ -136,7 +142,7 @@ export function SocialPage() {
       const action = approve ? "approve" : "reject";
       await apiFetch(`/participation/${sourceType}/${id}/${action}`, { method: "PATCH" });
       toast.success(`Participation request ${approve ? "approved" : "rejected"} successfully!`);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to process approval.");
     }
@@ -163,6 +169,11 @@ export function SocialPage() {
 
   return (
     <div className="mx-auto max-w-7xl font-sans text-foreground">
+      {refreshing && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-card">
+          Refreshing data...
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold lg:text-3xl flex items-center gap-2">

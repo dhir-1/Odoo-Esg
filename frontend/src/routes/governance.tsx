@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 import { Shield, Plus, CheckCircle, AlertTriangle, FileText, User } from "lucide-react";
+import { samplePolicies, sampleAudits, sampleComplianceIssues } from "@/lib/dashboard-mock-data";
 
 interface ESGPolicy {
   id: number;
@@ -56,6 +57,7 @@ export function GovernancePage() {
   const [issues, setIssues] = useState<ComplianceIssue[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Track local acknowledgements in session state
   const [localAcks, setLocalAcks] = useState<Record<number, boolean>>({});
@@ -75,8 +77,12 @@ export function GovernancePage() {
     due_date: new Date(Date.now() + 15 * 86400000).toISOString().split("T")[0], owner_id: ""
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [pols, auds, iss, emps] = await Promise.all([
         apiFetch<ESGPolicy[]>("/governance/policies/"),
@@ -89,9 +95,13 @@ export function GovernancePage() {
       setIssues(iss);
       setEmployees(emps);
     } catch (err: any) {
+      if (policies.length === 0) setPolicies(samplePolicies as ESGPolicy[]);
+      if (audits.length === 0) setAudits(sampleAudits as Audit[]);
+      if (issues.length === 0) setIssues(sampleComplianceIssues as ComplianceIssue[]);
       toast.error(err.message || "Failed to load Governance module data.");
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false);
+      else setLoading(false);
     }
   };
 
@@ -108,7 +118,7 @@ export function GovernancePage() {
       });
       toast.success("ESG Policy created successfully in Draft mode!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create policy.");
     }
@@ -128,7 +138,7 @@ export function GovernancePage() {
       });
       toast.success("Audit entry scheduled successfully!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create audit record.");
     }
@@ -151,7 +161,7 @@ export function GovernancePage() {
       });
       toast.success("Compliance issue logged and assigned to owner!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to log compliance issue.");
     }
@@ -162,11 +172,15 @@ export function GovernancePage() {
       await apiFetch(`/governance/policies/${id}/acknowledge`, { method: "POST" });
       toast.success("Policy acknowledged successfully!");
       setLocalAcks(prev => ({ ...prev, [id]: true }));
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to acknowledge policy.");
     }
   };
+
+  const visiblePolicies = policies.length === 0 ? (samplePolicies as ESGPolicy[]) : policies;
+  const visibleAudits = audits.length === 0 ? (sampleAudits as Audit[]) : audits;
+  const visibleIssues = issues.length === 0 ? (sampleComplianceIssues as ComplianceIssue[]) : issues;
 
   if (loading) {
     return (
@@ -178,6 +192,11 @@ export function GovernancePage() {
 
   return (
     <div className="mx-auto max-w-7xl font-sans text-foreground">
+      {refreshing && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-card">
+          Refreshing data...
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold lg:text-3xl flex items-center gap-2">
@@ -328,7 +347,7 @@ export function GovernancePage() {
               </tr>
             </thead>
             <tbody>
-              {policies.map((p) => {
+              {visiblePolicies.map((p) => {
                 const isAcknowledged = localAcks[p.id];
                 return (
                   <tr key={p.id} className="border-b border-border hover:bg-muted/10 transition-colors">
@@ -384,7 +403,7 @@ export function GovernancePage() {
               </tr>
             </thead>
             <tbody>
-              {audits.map((a) => (
+              {visibleAudits.map((a) => (
                 <tr key={a.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                   <td className="p-4 font-medium text-foreground">{a.title}</td>
                   <td className="p-4 font-body">{a.audit_date}</td>
@@ -414,7 +433,7 @@ export function GovernancePage() {
               </tr>
             </thead>
             <tbody>
-              {issues.map((i) => (
+              {visibleIssues.map((i) => (
                 <tr key={i.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                   <td className="p-4 font-medium text-foreground">{i.description}</td>
                   <td className="p-4">

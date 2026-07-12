@@ -82,6 +82,7 @@ export function GamificationPage() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Challenge Status Filter
   const [challengeFilter, setChallengeFilter] = useState<string>("Active");
@@ -90,8 +91,12 @@ export function GamificationPage() {
   const [submittingProgressId, setSubmittingProgressId] = useState<number | null>(null);
   const [progressForm, setProgressForm] = useState({ progress: 50, proof_url: "" });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [challs, bgs, rewds, lead, mine] = await Promise.all([
         apiFetch<Challenge[]>("/challenges/challenges/"),
@@ -121,7 +126,8 @@ export function GamificationPage() {
     } catch (err: any) {
       toast.error(err.message || "Failed to load Gamification system data.");
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false);
+      else setLoading(false);
     }
   };
 
@@ -135,7 +141,7 @@ export function GamificationPage() {
     try {
       await apiFetch(`/challenges/challenges/${id}/join`, { method: "POST" });
       toast.success("Successfully joined the challenge! Let's build a greener future!");
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to join challenge.");
     }
@@ -155,7 +161,7 @@ export function GamificationPage() {
       toast.success("Challenge progress logged successfully!");
       setSubmittingProgressId(null);
       setProgressForm({ progress: 50, proof_url: "" });
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to log challenge progress.");
     }
@@ -174,7 +180,7 @@ export function GamificationPage() {
     try {
       await apiFetch(`/rewards/${reward.id}/redeem`, { method: "POST" });
       toast.success(`Successfully redeemed ${reward.name}! Enjoy your reward.`);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       if (err.status === 409) {
         toast.warning("Conflict error: Out of stock or already redeemed!");
@@ -200,6 +206,11 @@ export function GamificationPage() {
 
   return (
     <div className="mx-auto max-w-7xl font-sans text-foreground">
+      {refreshing && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-card">
+          Refreshing data...
+        </div>
+      )}
       {/* Rewards score header banner */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6 bg-gradient-to-r from-gold-50 to-amber-50/50 border border-gold-200 rounded-card p-6">
         <div className="flex items-center gap-3">

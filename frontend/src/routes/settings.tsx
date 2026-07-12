@@ -42,6 +42,7 @@ export function SettingsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Filter Categories
   const [catTypeFilter, setCatTypeFilter] = useState<string>("All");
@@ -71,8 +72,12 @@ export function SettingsPage() {
     name: "", type: "CSR_ACTIVITY", status: "Active"
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [depts, cats, config] = await Promise.all([
         apiFetch<Department[]>("/departments/"),
@@ -85,7 +90,8 @@ export function SettingsPage() {
     } catch (err: any) {
       toast.error(err.message || "Failed to load settings configuration.");
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false);
+      else setLoading(false);
     }
   };
 
@@ -145,7 +151,7 @@ export function SettingsPage() {
       });
       toast.success("Department created successfully!");
       setShowDeptForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create department.");
     }
@@ -160,7 +166,7 @@ export function SettingsPage() {
       });
       toast.success("Initiative category created successfully!");
       setShowCatForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create category.");
     }
@@ -182,6 +188,11 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-7xl font-sans text-foreground">
+      {refreshing && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-card">
+          Refreshing data...
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold lg:text-3xl flex items-center gap-2">

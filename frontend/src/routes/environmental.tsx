@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ecosphere/card";
 import { Button } from "@/components/ecosphere/button";
 import { Badge } from "@/components/ecosphere/badge";
+import { AnimatedNumber } from "@/components/ecosphere/animated-number";
 import { apiFetch } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Leaf, Plus, Sparkles } from "lucide-react";
+import { sampleEmissionFactors, sampleProductProfiles } from "@/lib/dashboard-mock-data";
 
 interface EmissionFactor {
   id: number;
@@ -72,6 +75,7 @@ export function EnvironmentalPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -93,8 +97,12 @@ export function EnvironmentalPage() {
     target_date: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [facs, profs, txs, gls, depts, cats] = await Promise.all([
         apiFetch<EmissionFactor[]>("/emission-factors/"),
@@ -111,9 +119,15 @@ export function EnvironmentalPage() {
       setDepartments(depts);
       setCategories(cats);
     } catch (err: any) {
+      if (factors.length === 0) setFactors(sampleEmissionFactors as EmissionFactor[]);
+      if (profiles.length === 0) setProfiles(sampleProductProfiles as ProductProfile[]);
       toast.error(err.message || "Failed to load Environmental module data.");
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -130,7 +144,7 @@ export function EnvironmentalPage() {
       });
       toast.success("Emission Factor created successfully!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create emission factor.");
     }
@@ -150,7 +164,7 @@ export function EnvironmentalPage() {
       });
       toast.success("Product ESG Profile created successfully!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create product profile.");
     }
@@ -182,7 +196,7 @@ export function EnvironmentalPage() {
       });
       toast.success(txForm.simulate ? "Simulated auto-calculated transaction logged!" : "Manual carbon transaction logged!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to log transaction.");
     }
@@ -205,11 +219,16 @@ export function EnvironmentalPage() {
       });
       toast.success("Environmental Goal created successfully!");
       setShowForm(false);
-      loadData();
+      loadData({ silent: true });
     } catch (err: any) {
       toast.error(err.message || "Failed to create environmental goal.");
     }
   };
+
+  const hasDemoFactors = factors.length === 0;
+  const hasDemoProfiles = profiles.length === 0;
+  const visibleFactors = hasDemoFactors ? (sampleEmissionFactors as EmissionFactor[]) : factors;
+  const visibleProfiles = hasDemoProfiles ? (sampleProductProfiles as ProductProfile[]) : profiles;
 
   if (loading) {
     return (
@@ -221,6 +240,11 @@ export function EnvironmentalPage() {
 
   return (
     <div className="mx-auto max-w-7xl font-sans text-foreground">
+      {refreshing && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-card">
+          Refreshing data...
+        </div>
+      )}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold lg:text-3xl flex items-center gap-2">
@@ -234,6 +258,27 @@ export function EnvironmentalPage() {
           <Plus className="h-4 w-4" /> {showForm ? "Close Form" : "Add Record"}
         </Button>
       </div>
+
+      <motion.div
+        className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+      >
+        {[
+          { label: "Emission Factors", value: visibleFactors.length },
+          { label: "Product Profiles", value: visibleProfiles.length },
+          { label: "Transactions", value: transactions.length },
+          { label: "Goals", value: goals.length },
+        ].map((item) => (
+          <Card key={item.label} hover={false} className="p-4">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">{item.label}</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              <AnimatedNumber value={item.value} />
+            </p>
+          </Card>
+        ))}
+      </motion.div>
 
       {showForm && (
         <Card hover={false} className="mb-6 p-6 border-l-4 border-l-accent animate-in fade-in slide-in-from-top-4 duration-200">
@@ -301,7 +346,7 @@ export function EnvironmentalPage() {
                 <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">Emission Factor Association</label>
                 <select value={profileForm.emission_factor_id} onChange={(e) => setProfileForm({ ...profileForm, emission_factor_id: e.target.value })} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
                   <option value="">No Association</option>
-                  {factors.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.unit})</option>)}
+                  {visibleFactors.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.unit})</option>)}
                 </select>
               </div>
               <div className="sm:col-span-2">
@@ -418,7 +463,7 @@ export function EnvironmentalPage() {
               </tr>
             </thead>
             <tbody>
-              {factors.map((f) => (
+              {visibleFactors.map((f) => (
                 <tr key={f.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                   <td className="p-4 font-medium text-foreground">{f.name}</td>
                   <td className="p-4 text-muted-foreground">{f.activity_type}</td>
@@ -445,7 +490,7 @@ export function EnvironmentalPage() {
               </tr>
             </thead>
             <tbody>
-              {profiles.map((p) => (
+              {visibleProfiles.map((p) => (
                 <tr key={p.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                   <td className="p-4 font-medium text-foreground">{p.product_name}</td>
                   <td className="p-4 font-body text-muted-foreground">{p.sku || "-"}</td>
