@@ -83,6 +83,24 @@ async def create_department(
     )
     return res.scalars().first()
 
+@router.get("/public", summary="Public department list for signup dropdowns")
+async def list_departments_public(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns a lightweight list of active departments (id, name, code)
+    without requiring authentication. Used by the signup form dropdown.
+    """
+    query = (
+        select(Department.id, Department.name, Department.code)
+        .filter(Department.status == StatusEnum.ACTIVE)
+        .order_by(Department.name)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+    return [{"id": r.id, "name": r.name, "code": r.code, "status": "Active"} for r in rows]
+
+
 @router.get("/", response_model=List[DepartmentRead])
 async def list_departments(
     status: Optional[StatusEnum] = Query(None, description="Filter by active/inactive status"),

@@ -27,6 +27,15 @@ class UserRegister(BaseModel):
     date_joined: date
     avatar_url: Optional[str] = None
 
+class UserSignup(BaseModel):
+    """Public signup schema — no auth required, defaults to Employee role."""
+    full_name: str
+    email: EmailStr
+    password: str
+    department_id: int
+    designation: Optional[str] = "Sustainability Advocate"
+
+
 class EmployeeRead(BaseModel):
     id: int
     employee_code: str
