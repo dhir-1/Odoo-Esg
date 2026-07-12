@@ -16,6 +16,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.config import settings
 from app.db.base import Base
 
+# Import all models here so that Base.metadata has them registered before migration runs
+from app.models.department import Department, DepartmentScore
+from app.models.employee import Employee
+from app.models.category import Category
+from app.models.environmental import EmissionFactor, ProductESGProfile, EnvironmentalGoal
+from app.models.governance import ESGPolicy, PolicyAcknowledgement, Audit, ComplianceIssue
+from app.models.gamification import Badge, Reward, Challenge, ChallengeParticipation
+from app.models.carbon import CarbonTransaction
+from app.models.social import CSRActivity, EmployeeParticipation, DiversityMetric, TrainingRecord
+from app.models.settings import ESGConfiguration
+from app.models.notification import Notification
+from app.models.activity_log import ActivityLog
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
