@@ -58,3 +58,62 @@ class ChallengeParticipationRead(BaseModel):
 class ChallengeProgressSubmit(BaseModel):
     progress: float = Field(..., ge=0.0, le=100.0, description="Progress value (0.00 to 100.00)")
     proof_url: Optional[str] = Field(default=None, description="URL of the evidence uploaded")
+
+# ==========================================
+# Badge Schemas
+# ==========================================
+from typing import Dict, Any
+from app.models.enums import StatusEnum
+
+class BadgeCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1)
+    unlock_rule: Dict[str, Any] = Field(..., description="JSON rule specifying unlock conditions")
+    icon_url: Optional[str] = Field(default=None, description="Icon asset URL")
+
+class BadgeUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    unlock_rule: Optional[Dict[str, Any]] = None
+    icon_url: Optional[str] = None
+
+class BadgeRead(BaseModel):
+    id: int
+    name: str
+    description: str
+    unlock_rule: Dict[str, Any]
+    icon_url: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==========================================
+# Reward Schemas
+# ==========================================
+
+class RewardCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=150)
+    description: str = Field(..., min_length=1)
+    points_required: int = Field(..., ge=0, description="Points required to redeem reward")
+    stock: int = Field(..., ge=0, description="Available stock quantity")
+
+class RewardUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=150)
+    description: Optional[str] = None
+    points_required: Optional[int] = Field(default=None, ge=0)
+    stock: Optional[int] = Field(default=None, ge=0)
+    status: Optional[StatusEnum] = None
+
+class RewardRead(BaseModel):
+    id: int
+    name: str
+    description: str
+    points_required: int
+    stock: int
+    status: StatusEnum
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
