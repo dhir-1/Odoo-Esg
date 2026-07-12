@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.db.database import get_db, async_session_maker
 from app.api.v1.router import api_router
 from app.services.scoring import recalculate_all_departments
+from app.services.notifications import run_policy_acknowledgement_reminders
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,19 @@ async def _daily_score_recalculation():
             logger.exception("❌ Daily ESG score recalculation failed.")
 
 
+async def _daily_policy_reminders():
+    """
+    Scheduled job that checks for unacknowledged policies and sends notifications.
+    """
+    logger.info("⏰ Starting scheduled daily policy reminders...")
+    async with async_session_maker() as db:
+        try:
+            await run_policy_acknowledgement_reminders(db)
+            logger.info("✅ Daily policy reminders completed successfully.")
+        except Exception:
+            logger.exception("❌ Daily policy reminders failed.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -61,9 +75,18 @@ async def lifespan(app: FastAPI):
         id="daily_esg_score_recalc",
         replace_existing=True,
     )
+    # Schedule the daily policy reminders at 03:00 UTC
+    scheduler.add_job(
+        _daily_policy_reminders,
+        trigger="cron",
+        hour=3,
+        minute=0,
+        id="daily_policy_reminders",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info(
-        "🗓️  APScheduler started — daily ESG recalculation scheduled at 02:00 UTC"
+        "🗓️  APScheduler started — daily ESG recalculation at 02:00 UTC, policy reminders at 03:00 UTC"
     )
     yield
     # Shutdown

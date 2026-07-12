@@ -9,7 +9,7 @@ from app.db.database import get_db
 from app.models.social import CSRActivity, EmployeeParticipation
 from app.models.category import Category
 from app.models.employee import Employee
-from app.models.notification import Notification
+from app.services.notifications import create_notification
 from app.models.enums import (
     RoleEnum,
     CSRActivityStatusEnum,
@@ -370,15 +370,31 @@ async def approve_participation(
     employee.xp_points += activity.points_value
 
     # Send Notification if enabled
-    if config.notify_on_approval_decision:
-        notif = Notification(
-            recipient_id=employee.id,
-            type=NotificationTypeEnum.APPROVAL_DECISION,
-            title="CSR Activity Approved",
-            message=f"Your participation in '{activity.title}' has been approved! You earned {activity.points_value} points.",
-            is_read=False
-        )
-        db.add(notif)
+    await create_notification(
+        db=db,
+        recipient_id=employee.id,
+        type=NotificationTypeEnum.APPROVAL_DECISION,
+        title="CSR Activity Approved",
+        message=f"Your participation in '{activity.title}' has been approved! You earned {activity.points_value} points.",
+        related_entity_type="EmployeeParticipation",
+        related_entity_id=participation.id
+    )
+
+    # Broadcast leaderboard delta to department
+    from app.websockets.manager import ws_manager
+    await ws_manager.broadcast_to_department(
+        department_id=employee.department_id,
+        payload={
+            "event": "leaderboard_delta",
+            "data": {
+                "type": "employee",
+                "employee_id": employee.id,
+                "full_name": employee.full_name,
+                "delta": activity.points_value,
+                "metric": "points_balance"
+            }
+        }
+    )
 
     # Log public activity feed
     await log_activity(
@@ -440,16 +456,15 @@ async def reject_participation(
     participation.reviewed_by_id = current_user.id
 
     # Send Notification if enabled
-    config = await get_esg_config(db)
-    if config.notify_on_approval_decision:
-        notif = Notification(
-            recipient_id=participation.employee_id,
-            type=NotificationTypeEnum.APPROVAL_DECISION,
-            title="CSR Activity Rejected",
-            message=f"Your participation in '{participation.activity.title}' has been rejected.",
-            is_read=False
-        )
-        db.add(notif)
+    await create_notification(
+        db=db,
+        recipient_id=participation.employee_id,
+        type=NotificationTypeEnum.APPROVAL_DECISION,
+        title="CSR Activity Rejected",
+        message=f"Your participation in '{participation.activity.title}' has been rejected.",
+        related_entity_type="EmployeeParticipation",
+        related_entity_id=participation.id
+    )
 
     await db.commit()
     await db.refresh(participation)

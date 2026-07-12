@@ -684,6 +684,28 @@ async def calculate_department_score(
     await db.commit()
     await db.refresh(dept_score)
 
+    # Broadcast score recalculation to department
+    from app.websockets.manager import ws_manager
+    try:
+        await ws_manager.broadcast_to_department(
+            department_id=department_id,
+            payload={
+                "event": "score_calculated",
+                "data": {
+                    "department_id": department_id,
+                    "period_start": period_start.isoformat(),
+                    "period_end": period_end.isoformat(),
+                    "environmental_score": float(env_score),
+                    "social_score": float(soc_score),
+                    "governance_score": float(gov_score),
+                    "total_score": float(total),
+                    "calculated_at": dept_score.calculated_at.isoformat()
+                }
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to broadcast score recalculation: {e}")
+
     logger.info(
         "Dept %d score [%s–%s]: E=%.2f S=%.2f G=%.2f T=%.2f",
         department_id, period_start, period_end,

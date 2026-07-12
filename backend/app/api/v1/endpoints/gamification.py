@@ -8,7 +8,7 @@ from app.db.database import get_db
 from app.models.gamification import Challenge, ChallengeParticipation
 from app.models.category import Category
 from app.models.employee import Employee
-from app.models.notification import Notification
+from app.services.notifications import create_notification
 from app.models.enums import (
     RoleEnum,
     ChallengeStatusEnum,
@@ -306,15 +306,31 @@ async def approve_challenge_participation(
     employee.xp_points += challenge.xp_reward
 
     # Send Notification if enabled
-    if config.notify_on_approval_decision:
-        notif = Notification(
-            recipient_id=employee.id,
-            type=NotificationTypeEnum.APPROVAL_DECISION,
-            title="Challenge Completed",
-            message=f"Congratulations! Your participation in the challenge '{challenge.title}' was approved! You earned {challenge.xp_reward} XP.",
-            is_read=False
-        )
-        db.add(notif)
+    await create_notification(
+        db=db,
+        recipient_id=employee.id,
+        type=NotificationTypeEnum.APPROVAL_DECISION,
+        title="Challenge Completed",
+        message=f"Congratulations! Your participation in the challenge '{challenge.title}' was approved! You earned {challenge.xp_reward} XP.",
+        related_entity_type="ChallengeParticipation",
+        related_entity_id=participation.id
+    )
+
+    # Broadcast leaderboard delta to department
+    from app.websockets.manager import ws_manager
+    await ws_manager.broadcast_to_department(
+        department_id=employee.department_id,
+        payload={
+            "event": "leaderboard_delta",
+            "data": {
+                "type": "employee",
+                "employee_id": employee.id,
+                "full_name": employee.full_name,
+                "delta": challenge.xp_reward,
+                "metric": "xp_points"
+            }
+        }
+    )
 
     # Log public activity feed
     await log_activity(
@@ -367,16 +383,15 @@ async def reject_challenge_participation(
     participation.reviewed_by_id = current_user.id
 
     # Send Notification if enabled
-    config = await get_esg_config(db)
-    if config.notify_on_approval_decision:
-        notif = Notification(
-            recipient_id=participation.employee_id,
-            type=NotificationTypeEnum.APPROVAL_DECISION,
-            title="Challenge Rejected",
-            message=f"Your participation in the challenge '{participation.challenge.title}' was rejected.",
-            is_read=False
-        )
-        db.add(notif)
+    await create_notification(
+        db=db,
+        recipient_id=participation.employee_id,
+        type=NotificationTypeEnum.APPROVAL_DECISION,
+        title="Challenge Rejected",
+        message=f"Your participation in the challenge '{participation.challenge.title}' was rejected.",
+        related_entity_type="ChallengeParticipation",
+        related_entity_id=participation.id
+    )
 
     await db.commit()
     await db.refresh(participation)

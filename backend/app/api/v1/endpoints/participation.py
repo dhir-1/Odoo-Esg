@@ -7,7 +7,7 @@ from app.db.database import get_db
 from app.models.social import EmployeeParticipation, CSRActivity
 from app.models.gamification import ChallengeParticipation, Challenge
 from app.models.employee import Employee
-from app.models.notification import Notification
+from app.services.notifications import create_notification
 from app.models.enums import (
     RoleEnum,
     ParticipationApprovalStatusEnum,
@@ -156,16 +156,31 @@ async def approve_unified_participation(
         emp.xp_points += activity.points_value
 
         # Notification
-        if config.notify_on_approval_decision:
-            notif = Notification(
-                recipient_id=emp.id,
-                type=NotificationTypeEnum.APPROVAL_DECISION,
-                title="CSR Activity Approved",
-                message=f"Your participation in '{activity.title}' has been approved! You earned {activity.points_value} points.",
-                related_entity_type="EmployeeParticipation",
-                related_entity_id=part.id
-            )
-            db.add(notif)
+        await create_notification(
+            db=db,
+            recipient_id=emp.id,
+            type=NotificationTypeEnum.APPROVAL_DECISION,
+            title="CSR Activity Approved",
+            message=f"Your participation in '{activity.title}' has been approved! You earned {activity.points_value} points.",
+            related_entity_type="EmployeeParticipation",
+            related_entity_id=part.id
+        )
+
+        # Broadcast leaderboard delta to department
+        from app.websockets.manager import ws_manager
+        await ws_manager.broadcast_to_department(
+            department_id=emp.department_id,
+            payload={
+                "event": "leaderboard_delta",
+                "data": {
+                    "type": "employee",
+                    "employee_id": emp.id,
+                    "full_name": emp.full_name,
+                    "delta": activity.points_value,
+                    "metric": "points_balance"
+                }
+            }
+        )
 
         # Activity log
         await log_activity(
@@ -241,16 +256,31 @@ async def approve_unified_participation(
         emp.xp_points += challenge.xp_reward
 
         # Notification
-        if config.notify_on_approval_decision:
-            notif = Notification(
-                recipient_id=emp.id,
-                type=NotificationTypeEnum.APPROVAL_DECISION,
-                title="Challenge Completed",
-                message=f"Congratulations! Your participation in the challenge '{challenge.title}' was approved! You earned {challenge.xp_reward} XP.",
-                related_entity_type="ChallengeParticipation",
-                related_entity_id=part.id
-            )
-            db.add(notif)
+        await create_notification(
+            db=db,
+            recipient_id=emp.id,
+            type=NotificationTypeEnum.APPROVAL_DECISION,
+            title="Challenge Completed",
+            message=f"Congratulations! Your participation in the challenge '{challenge.title}' was approved! You earned {challenge.xp_reward} XP.",
+            related_entity_type="ChallengeParticipation",
+            related_entity_id=part.id
+        )
+
+        # Broadcast leaderboard delta to department
+        from app.websockets.manager import ws_manager
+        await ws_manager.broadcast_to_department(
+            department_id=emp.department_id,
+            payload={
+                "event": "leaderboard_delta",
+                "data": {
+                    "type": "employee",
+                    "employee_id": emp.id,
+                    "full_name": emp.full_name,
+                    "delta": challenge.xp_reward,
+                    "metric": "xp_points"
+                }
+            }
+        )
 
         # Activity log
         await log_activity(
@@ -331,16 +361,15 @@ async def reject_unified_participation(
         part.reviewed_by_id = current_user.id
 
         # Notification
-        if config.notify_on_approval_decision:
-            notif = Notification(
-                recipient_id=emp.id,
-                type=NotificationTypeEnum.APPROVAL_DECISION,
-                title="CSR Activity Rejected",
-                message=f"Your participation in '{activity.title}' has been rejected.",
-                related_entity_type="EmployeeParticipation",
-                related_entity_id=part.id
-            )
-            db.add(notif)
+        await create_notification(
+            db=db,
+            recipient_id=emp.id,
+            type=NotificationTypeEnum.APPROVAL_DECISION,
+            title="CSR Activity Rejected",
+            message=f"Your participation in '{activity.title}' has been rejected.",
+            related_entity_type="EmployeeParticipation",
+            related_entity_id=part.id
+        )
 
         await db.commit()
         await db.refresh(part)
@@ -392,16 +421,15 @@ async def reject_unified_participation(
         part.reviewed_by_id = current_user.id
 
         # Notification
-        if config.notify_on_approval_decision:
-            notif = Notification(
-                recipient_id=emp.id,
-                type=NotificationTypeEnum.APPROVAL_DECISION,
-                title="Challenge Participation Rejected",
-                message=f"Your participation in challenge '{challenge.title}' has been rejected.",
-                related_entity_type="ChallengeParticipation",
-                related_entity_id=part.id
-            )
-            db.add(notif)
+        await create_notification(
+            db=db,
+            recipient_id=emp.id,
+            type=NotificationTypeEnum.APPROVAL_DECISION,
+            title="Challenge Participation Rejected",
+            message=f"Your participation in challenge '{challenge.title}' has been rejected.",
+            related_entity_type="ChallengeParticipation",
+            related_entity_id=part.id
+        )
 
         await db.commit()
         await db.refresh(part)

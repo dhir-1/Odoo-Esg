@@ -7,7 +7,7 @@ from sqlalchemy.sql import text
 from app.db.database import get_db
 from app.models.governance import ESGPolicy, PolicyAcknowledgement, Audit, ComplianceIssue
 from app.models.employee import Employee
-from app.models.notification import Notification
+from app.services.notifications import create_notification
 from app.models.enums import (
     RoleEnum,
     PolicyStatusEnum,
@@ -434,18 +434,15 @@ async def create_compliance_issue(
     await db.flush()
 
     # Trigger Notification to owner if enabled
-    config = await get_esg_config(db)
-    if config.notify_on_compliance_issue:
-        notif = Notification(
-            recipient_id=issue_in.owner_id,
-            type=NotificationTypeEnum.COMPLIANCE_ISSUE,
-            title="Compliance Issue Assigned",
-            message=f"You have been assigned a new compliance issue: '{issue_in.description}' (Due: {issue_in.due_date}).",
-            is_read=False,
-            related_entity_type="ComplianceIssue",
-            related_entity_id=new_issue.id
-        )
-        db.add(notif)
+    await create_notification(
+        db=db,
+        recipient_id=issue_in.owner_id,
+        type=NotificationTypeEnum.COMPLIANCE_ISSUE,
+        title="Compliance Issue Assigned",
+        message=f"You have been assigned a new compliance issue: '{issue_in.description}' (Due: {issue_in.due_date}).",
+        related_entity_type="ComplianceIssue",
+        related_entity_id=new_issue.id
+    )
 
     # Log public activity
     await log_activity(

@@ -76,6 +76,22 @@ async def redeem_reward(
     # Commit changes inside locked transaction
     await db.commit()
     await db.refresh(redemption)
+
+    # Broadcast leaderboard delta to department
+    from app.websockets.manager import ws_manager
+    await ws_manager.broadcast_to_department(
+        department_id=employee.department_id,
+        payload={
+            "event": "leaderboard_delta",
+            "data": {
+                "type": "employee",
+                "employee_id": employee.id,
+                "full_name": employee.full_name,
+                "delta": -reward.points_required,
+                "metric": "points_balance"
+            }
+        }
+    )
     
     # Load reward relationship manually to satisfy schema output
     redemption_res = await db.execute(

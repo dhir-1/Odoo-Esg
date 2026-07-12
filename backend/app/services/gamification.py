@@ -4,9 +4,9 @@ from app.models.employee import Employee
 from app.models.gamification import Badge, EmployeeBadge, ChallengeParticipation
 from app.models.social import EmployeeParticipation
 from app.models.settings import ESGConfiguration
-from app.models.notification import Notification
 from app.models.enums import ParticipationApprovalStatusEnum, NotificationTypeEnum, ActivityLogEventTypeEnum
 from app.services.activity_log import log_activity
+from app.services.notifications import create_notification
 
 async def evaluate_badges_for_employee(db: AsyncSession, employee_id: int):
     # 1. Fetch ESG Configuration
@@ -79,13 +79,15 @@ async def evaluate_badges_for_employee(db: AsyncSession, employee_id: int):
             db.add(new_award)
 
             # Trigger notification
-            new_notification = Notification(
+            await create_notification(
+                db=db,
                 recipient_id=employee_id,
                 type=NotificationTypeEnum.BADGE_UNLOCK,
                 title="Badge Unlocked!",
-                message=f"Congratulations! You unlocked the badge '{badge.name}': {badge.description}"
+                message=f"Congratulations! You unlocked the badge '{badge.name}': {badge.description}",
+                related_entity_type="Badge",
+                related_entity_id=badge.id
             )
-            db.add(new_notification)
 
             # Log activity
             await log_activity(
